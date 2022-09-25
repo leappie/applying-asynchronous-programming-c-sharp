@@ -3,7 +3,9 @@ using StockAnalyzer.Core.Domain;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net;
+using System.Net.Http;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Navigation;
 
@@ -21,29 +23,47 @@ namespace StockAnalyzer.Windows
 
 
 
-        private void Search_Click(object sender, RoutedEventArgs e)
+        private async void Search_Click(object sender, RoutedEventArgs e)
         {
             BeforeLoadingStockData();
 
-            var client = new WebClient();
+            // HTTP async
+            //using (var client = new HttpClient())
+            //{
 
-            var content = client.DownloadString($"{API_URL}/{StockIdentifier.Text}");
+            //    var responseTask = client.GetAsync($"{API_URL}/{StockIdentifier.Text}");
+            //    var response = await responseTask;
+            //    var content = await response.Content.ReadAsStringAsync();
 
-            // Simulate that the web call takes a very long time
-            Thread.Sleep(10000);
+            //    var data = JsonConvert.DeserializeObject<IEnumerable<StockPrice>>(content);
 
-            var data = JsonConvert.DeserializeObject<IEnumerable<StockPrice>>(content);
+            //    Stocks.ItemsSource = data;
+            //}
 
-            Stocks.ItemsSource = data;
+            var getStocksTask = GetStocks();
+
+            await getStocksTask;
 
             AfterLoadingStockData();
         }
 
+        // Avoid async void unless using event handlers 
+        private async Task GetStocks()
+        {
+            // IO async
+            try
+            {
+                var store = new Core.DataStore();
+                var responseTask = store.GetStockPrices(StockIdentifier.Text);
 
+                Stocks.ItemsSource = await responseTask;
+            }
+            catch (System.Exception ex)
+            {
+                Notes.Text = ex.Message;
+            }
 
-
-
-
+        }
 
 
         private void BeforeLoadingStockData()
